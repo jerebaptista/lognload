@@ -1,0 +1,130 @@
+[
+  {
+    "id": "vitoria",
+    "name": "Vitória",
+    "lat": -20.3155,
+    "lng": -40.3128,
+    "offers": ["gerais", "petroleo", "aco"],
+    "demands": ["cafe", "frutas", "minerio"]
+  },
+  {
+    "id": "vila-velha",
+    "name": "Vila Velha",
+    "lat": -20.3297,
+    "lng": -40.2925,
+    "offers": ["gerais", "frutas"],
+    "demands": ["petroleo", "aco", "cafe"]
+  },
+  {
+    "id": "serra",
+    "name": "Serra",
+    "lat": -20.1286,
+    "lng": -40.3078,
+    "offers": ["aco", "gerais"],
+    "demands": ["minerio", "petroleo", "frutas"]
+  },
+  {
+    "id": "cariacica",
+    "name": "Cariacica",
+    "lat": -20.2639,
+    "lng": -40.4165,
+    "offers": ["gerais", "aco"],
+    "demands": ["cafe", "frutas", "petroleo"]
+  },
+  {
+    "id": "viana",
+    "name": "Viana",
+    "lat": -20.3903,
+    "lng": -40.4961,
+    "offers": ["frutas", "gerais"],
+    "demands": ["aco", "petroleo"]
+  },
+  {
+    "id": "guarapari",
+    "name": "Guarapari",
+    "lat": -20.6667,
+    "lng": -40.4975,
+    "offers": ["frutas", "gerais"],
+    "demands": ["petroleo", "cafe", "aco"]
+  },
+  {
+    "id": "anchieta",
+    "name": "Anchieta",
+    "lat": -20.8056,
+    "lng": -40.6458,
+    "offers": ["minerio", "aco"],
+    "demands": ["gerais", "frutas", "petroleo"]
+  },
+  {
+    "id": "cachoeiro",
+    "name": "Cachoeiro de Itapemirim",
+    "lat": -20.8489,
+    "lng": -41.1128,
+    "offers": ["minerio", "cafe", "aco"],
+    "demands": ["petroleo", "gerais", "frutas"]
+  },
+  {
+    "id": "alegre",
+    "name": "Alegre",
+    "lat": -20.7628,
+    "lng": -41.5322,
+    "offers": ["cafe", "frutas"],
+    "demands": ["gerais", "aco", "petroleo"]
+  },
+  {
+    "id": "domingos-martins",
+    "name": "Domingos Martins",
+    "lat": -20.3633,
+    "lng": -40.6592,
+    "offers": ["cafe", "frutas"],
+    "demands": ["gerais", "petroleo"]
+  },
+  {
+    "id": "santa-teresa",
+    "name": "Santa Teresa",
+    "lat": -19.9361,
+    "lng": -40.5978,
+    "offers": ["cafe", "frutas"],
+    "demands": ["gerais", "aco"]
+  },
+  {
+    "id": "colatina",
+    "name": "Colatina",
+    "lat": -19.5392,
+    "lng": -40.6306,
+    "offers": ["cafe", "gerais", "aco"],
+    "demands": ["minerio", "petroleo", "frutas"]
+  },
+  {
+    "id": "linhares",
+    "name": "Linhares",
+    "lat": -19.3911,
+    "lng": -40.0722,
+    "offers": ["petroleo", "frutas", "gerais"],
+    "demands": ["aco", "cafe", "minerio"]
+  },
+  {
+    "id": "aracruz",
+    "name": "Aracruz",
+    "lat": -19.8203,
+    "lng": -40.2733,
+    "offers": ["aco", "gerais"],
+    "demands": ["minerio", "petroleo", "frutas"]
+  },
+  {
+    "id": "sao-mateus",
+    "name": "São Mateus",
+    "lat": -18.72,
+    "lng": -39.8589,
+    "offers": ["petroleo", "frutas"],
+    "demands": ["gerais", "aco", "cafe"]
+  },
+  {
+    "id": "nova-venecia",
+    "name": "Nova Venécia",
+    "lat": -18.7106,
+    "lng": -40.4006,
+    "offers": ["minerio", "cafe"],
+    "demands": ["gerais", "petroleo", "frutas"]
+  }
+]
