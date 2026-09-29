@@ -1,38 +1,43 @@
-import type { ResourceId } from "./types";
+import type { PackageKind } from "./types";
 
-export const GAME_VERSION = 1;
-export const SAVE_KEY = "lognload-save-v1";
+/** Bump para invalidar save antigo (modo cidades → entregas locais). */
+export const GAME_VERSION = 2;
+export const SAVE_KEY = "lognload-save-v2";
 
-export const HOME_CITY_ID = "vitoria";
-export const STARTING_MONEY = 5_000;
-export const VEHICLE_ID = "car-1";
+export const STARTING_MONEY = 120;
+export const VEHICLE_ID = "bike-1";
 
-/** Velocidade simulada do carro (km/h). */
-export const CAR_SPEED_KMH = 70;
+/** Raio de pedidos disponíveis (km). */
+export const ORDER_RADIUS_KM = 2;
 
-/** Multiplica Haversine para aproximar estrada (não linha reta). */
-export const ROAD_FACTOR = 1.3;
+/** Quantos pedidos gerar em torno da posição atual. */
+export const ORDERS_IN_RADIUS = 5;
+
+/** Distância mínima do pedido (km) para não nascer em cima do jogador. */
+export const MIN_ORDER_DISTANCE_KM = 0.35;
 
 /**
- * Compressão de tempo: 1h de viagem no jogo ≈ 60s reais.
- * durationSec = (km / velocidade) * 3600 / TIME_COMPRESSION
+ * 1 minuto de jogo ≈ N segundos reais.
+ * Ex.: ETA 10 min → ~20s de animação.
  */
-export const TIME_COMPRESSION = 60;
+export const REAL_SECONDS_PER_GAME_MINUTE = 2;
 
-/** Quantos contratos gerar por cidade destino. */
-export const CONTRACTS_PER_CITY = 4;
+/** Velocidade urbana simulada (só para flavor / fallback). */
+export const CITY_SPEED_KMH = 28;
 
-export const RESOURCE_LABELS: Record<ResourceId, string> = {
-  cafe: "Café",
-  minerio: "Minério",
-  aco: "Aço",
-  frutas: "Frutas",
-  petroleo: "Petróleo",
-  gerais: "Mercadorias",
+export const ROAD_FACTOR = 1.25;
+
+export const PACKAGE_LABELS: Record<PackageKind, string> = {
+  encomenda: "Encomenda",
+  comida: "Comida",
+  documento: "Documento",
+  farmacia: "Farmácia",
+  mercado: "Mercado",
 };
 
-/** Centro aproximado do Espírito Santo [lng, lat]. */
-export const ES_MAP_CENTER: [number, number] = [-40.35, -19.85];
-export const ES_MAP_ZOOM = 7.6;
+/** Centro da Grande Vitória [lng, lat] — zoom de bairro. */
+export const LOCAL_MAP_CENTER: [number, number] = [-40.32, -20.3];
+export const LOCAL_MAP_ZOOM = 12.5;
+export const PLAYING_MAP_ZOOM = 13.4;
 
 export const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";

@@ -1,9 +1,8 @@
 "use client";
 
-import { ContractsPanel } from "@/components/game/ContractsPanel";
 import { GameHeader } from "@/components/game/GameHeader";
-import { getCityById } from "@/lib/game/cities";
-import { RESOURCE_LABELS } from "@/lib/game/constants";
+import { LocationSetup } from "@/components/game/LocationSetup";
+import { OrdersPanel } from "@/components/game/OrdersPanel";
 import { formatMoney } from "@/lib/game/geo";
 import { useGameStore } from "@/lib/game/store";
 import dynamic from "next/dynamic";
@@ -24,11 +23,11 @@ const GameMap = dynamic(
 
 export function GameShell() {
   const hydrated = useGameStore((s) => s.hydrated);
+  const hasLocation = useGameStore((s) => s.player.hasLocation);
   const tickTravel = useGameStore((s) => s.tickTravel);
   const setHydrated = useGameStore((s) => s.setHydrated);
 
   useEffect(() => {
-    // Fallback caso onRehydrateStorage já tenha rodado antes do subscribe.
     if (useGameStore.persist.hasHydrated()) {
       setHydrated(true);
     }
@@ -40,9 +39,8 @@ export function GameShell() {
     const id = window.setInterval(() => {
       const { completed } = tickTravel(Date.now());
       if (completed) {
-        const to = getCityById(completed.toCityId);
         toast.success("Entrega concluída!", {
-          description: `${RESOURCE_LABELS[completed.resource]} em ${to?.name ?? "destino"} · +${formatMoney(completed.pay)}`,
+          description: `${completed.title} · ${completed.addressLabel} · +${formatMoney(completed.pay)}`,
         });
       }
     }, 200);
@@ -61,9 +59,12 @@ export function GameShell() {
   return (
     <div className="flex h-svh flex-col overflow-hidden">
       <GameHeader />
-      <div className="flex min-h-0 flex-1">
-        <GameMap />
-        <ContractsPanel />
+      <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row">
+        <div className="relative min-h-0 flex-1">
+          <GameMap />
+          {!hasLocation ? <LocationSetup /> : null}
+        </div>
+        {hasLocation ? <OrdersPanel /> : null}
       </div>
     </div>
   );

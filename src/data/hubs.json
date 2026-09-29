@@ -1,0 +1,110 @@
+[
+  {
+    "id": "centro-vitoria",
+    "name": "Centro de Vitória",
+    "district": "Centro",
+    "city": "Vitória",
+    "cep": "29010-100",
+    "lat": -20.3194,
+    "lng": -40.3378
+  },
+  {
+    "id": "praia-canto",
+    "name": "Praia do Canto",
+    "district": "Praia do Canto",
+    "city": "Vitória",
+    "cep": "29055-260",
+    "lat": -20.3008,
+    "lng": -40.2925
+  },
+  {
+    "id": "jardim-camburi",
+    "name": "Jardim Camburi",
+    "district": "Jardim Camburi",
+    "city": "Vitória",
+    "cep": "29090-040",
+    "lat": -20.2589,
+    "lng": -40.2678
+  },
+  {
+    "id": "jardim-da-penha",
+    "name": "Jardim da Penha",
+    "district": "Jardim da Penha",
+    "city": "Vitória",
+    "cep": "29060-110",
+    "lat": -20.2831,
+    "lng": -40.2986
+  },
+  {
+    "id": "goiabeiras",
+    "name": "Goiabeiras",
+    "district": "Goiabeiras",
+    "city": "Vitória",
+    "cep": "29075-010",
+    "lat": -20.2725,
+    "lng": -40.3042
+  },
+  {
+    "id": "praia-da-costa",
+    "name": "Praia da Costa",
+    "district": "Praia da Costa",
+    "city": "Vila Velha",
+    "cep": "29101-110",
+    "lat": -20.3367,
+    "lng": -40.2878
+  },
+  {
+    "id": "itapua",
+    "name": "Itapuã",
+    "district": "Itapuã",
+    "city": "Vila Velha",
+    "cep": "29101-580",
+    "lat": -20.3511,
+    "lng": -40.2994
+  },
+  {
+    "id": "gloria",
+    "name": "Glória",
+    "district": "Glória",
+    "city": "Vila Velha",
+    "cep": "29122-010",
+    "lat": -20.3456,
+    "lng": -40.3167
+  },
+  {
+    "id": "laranjeiras",
+    "name": "Laranjeiras",
+    "district": "Laranjeiras",
+    "city": "Serra",
+    "cep": "29165-060",
+    "lat": -20.1867,
+    "lng": -40.2561
+  },
+  {
+    "id": "jacaraipe",
+    "name": "Jacaraípe",
+    "district": "Jacaraípe",
+    "city": "Serra",
+    "cep": "29177-000",
+    "lat": -20.1406,
+    "lng": -40.1939
+  },
+  {
+    "id": "campo-grande",
+    "name": "Campo Grande",
+    "district": "Campo Grande",
+    "city": "Cariacica",
+    "cep": "29146-100",
+    "lat": -20.3372,
+    "lng": -40.3878
+  },
+  {
+    "id": "porto-de-cariacica",
+    "name": "Porto de Cariacica",
+    "district": "Porto de Cariacica",
+    "city": "Cariacica",
+    "cep": "29140-000",
+    "lat": -20.3208,
+    "lng": -40.3656
+  }
+]

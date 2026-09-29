@@ -2,29 +2,28 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { CITIES, getCityById } from "./cities";
 import {
   GAME_VERSION,
-  HOME_CITY_ID,
   SAVE_KEY,
   STARTING_MONEY,
   VEHICLE_ID,
 } from "./constants";
-import {
-  generateContractsFromCity,
-  straightRouteCoords,
-} from "./contracts";
-import type { Contract, GameState, PlayerState } from "./types";
+import { pointAlongRoute } from "./geo";
+import { generateOrdersAround, straightRoute } from "./orders";
+import type { DeliveryOrder, GameState, PlayerState } from "./types";
 
-function createInitialPlayer(): PlayerState {
+function createBlankPlayer(): PlayerState {
   return {
     money: STARTING_MONEY,
-    homeCityId: HOME_CITY_ID,
+    hasLocation: false,
+    locationLabel: "",
+    cep: undefined,
     vehicle: {
       id: VEHICLE_ID,
-      cityId: HOME_CITY_ID,
       status: "idle",
-      contractId: null,
+      lat: -20.3155,
+      lng: -40.3128,
+      orderId: null,
       progress01: 0,
       routeCoords: undefined,
       startedAtMs: undefined,
@@ -33,27 +32,36 @@ function createInitialPlayer(): PlayerState {
 }
 
 function createInitialState(): Omit<GameStore, keyof GameActions> {
-  const player = createInitialPlayer();
   return {
-    player,
-    contracts: generateContractsFromCity(player.vehicle.cityId, CITIES),
-    selectedCityId: null,
+    player: createBlankPlayer(),
+    orders: [],
+    selectedOrderId: null,
     version: GAME_VERSION,
     hydrated: false,
+    placingLocation: false,
   };
 }
 
 interface GameActions {
   setHydrated: (value: boolean) => void;
-  selectCity: (cityId: string | null) => void;
-  acceptContract: (contractId: string) => boolean;
-  tickTravel: (nowMs: number) => { completed: Contract | null };
-  refreshContracts: () => void;
+  setPlacingLocation: (value: boolean) => void;
+  setLocation: (opts: {
+    lat: number;
+    lng: number;
+    label: string;
+    cep?: string;
+  }) => void;
+  selectOrder: (orderId: string | null) => void;
+  acceptOrder: (orderId: string) => boolean;
+  tickTravel: (nowMs: number) => { completed: DeliveryOrder | null };
+  refreshOrders: () => void;
   resetGame: () => void;
 }
 
 export type GameStore = GameState & {
   hydrated: boolean;
+  /** Modo "clique no mapa para definir posição". */
+  placingLocation: boolean;
 } & GameActions;
 
 export const useGameStore = create<GameStore>()(
@@ -63,38 +71,68 @@ export const useGameStore = create<GameStore>()(
 
       setHydrated: (value) => set({ hydrated: value }),
 
-      selectCity: (cityId) => set({ selectedCityId: cityId }),
+      setPlacingLocation: (value) => set({ placingLocation: value }),
 
-      refreshContracts: () => {
+      setLocation: ({ lat, lng, label, cep }) => {
         const { player } = get();
-        if (player.vehicle.status === "en_route") return;
         set({
-          contracts: generateContractsFromCity(player.vehicle.cityId, CITIES),
+          placingLocation: false,
+          selectedOrderId: null,
+          player: {
+            ...player,
+            hasLocation: true,
+            locationLabel: label,
+            cep,
+            vehicle: {
+              ...player.vehicle,
+              lat,
+              lng,
+              status: "idle",
+              orderId: null,
+              progress01: 0,
+              routeCoords: undefined,
+              startedAtMs: undefined,
+            },
+          },
+          orders: generateOrdersAround(lat, lng),
         });
       },
 
-      acceptContract: (contractId) => {
-        const { player, contracts } = get();
-        if (player.vehicle.status === "en_route") return false;
+      selectOrder: (orderId) => set({ selectedOrderId: orderId }),
 
-        const contract = contracts.find((c) => c.id === contractId);
-        if (!contract) return false;
-        if (contract.fromCityId !== player.vehicle.cityId) return false;
+      refreshOrders: () => {
+        const { player } = get();
+        if (!player.hasLocation || player.vehicle.status === "en_route") return;
+        set({
+          orders: generateOrdersAround(player.vehicle.lat, player.vehicle.lng),
+          selectedOrderId: null,
+        });
+      },
 
-        const from = getCityById(contract.fromCityId);
-        const to = getCityById(contract.toCityId);
-        if (!from || !to) return false;
+      acceptOrder: (orderId) => {
+        const { player, orders } = get();
+        if (!player.hasLocation || player.vehicle.status === "en_route") {
+          return false;
+        }
+
+        const order = orders.find((o) => o.id === orderId);
+        if (!order) return false;
 
         set({
-          selectedCityId: contract.toCityId,
+          selectedOrderId: orderId,
           player: {
             ...player,
             vehicle: {
               ...player.vehicle,
               status: "en_route",
-              contractId: contract.id,
+              orderId: order.id,
               progress01: 0,
-              routeCoords: straightRouteCoords(from, to),
+              routeCoords: straightRoute(
+                player.vehicle.lat,
+                player.vehicle.lng,
+                order.toLat,
+                order.toLng,
+              ),
               startedAtMs: Date.now(),
             },
           },
@@ -103,22 +141,26 @@ export const useGameStore = create<GameStore>()(
       },
 
       tickTravel: (nowMs) => {
-        const { player, contracts } = get();
+        const { player, orders } = get();
         const { vehicle } = player;
 
-        if (vehicle.status !== "en_route" || !vehicle.contractId || !vehicle.startedAtMs) {
+        if (
+          vehicle.status !== "en_route" ||
+          !vehicle.orderId ||
+          !vehicle.startedAtMs
+        ) {
           return { completed: null };
         }
 
-        const contract = contracts.find((c) => c.id === vehicle.contractId);
-        if (!contract) {
+        const order = orders.find((o) => o.id === vehicle.orderId);
+        if (!order) {
           set({
             player: {
               ...player,
               vehicle: {
                 ...vehicle,
                 status: "idle",
-                contractId: null,
+                orderId: null,
                 progress01: 0,
                 routeCoords: undefined,
                 startedAtMs: undefined,
@@ -130,7 +172,7 @@ export const useGameStore = create<GameStore>()(
 
         const progress01 = Math.min(
           1,
-          (nowMs - vehicle.startedAtMs) / (contract.durationSec * 1000),
+          (nowMs - vehicle.startedAtMs) / (order.durationSec * 1000),
         );
 
         if (progress01 < 1) {
@@ -145,14 +187,22 @@ export const useGameStore = create<GameStore>()(
           return { completed: null };
         }
 
+        const route = vehicle.routeCoords ?? [
+          [vehicle.lng, vehicle.lat],
+          [order.toLng, order.toLat],
+        ];
+        const [lng, lat] = pointAlongRoute(route, 1);
+
         const nextPlayer: PlayerState = {
           ...player,
-          money: player.money + contract.pay,
+          money: player.money + order.pay,
+          locationLabel: order.addressLabel,
           vehicle: {
             ...vehicle,
-            cityId: contract.toCityId,
+            lat,
+            lng,
             status: "idle",
-            contractId: null,
+            orderId: null,
             progress01: 0,
             routeCoords: undefined,
             startedAtMs: undefined,
@@ -161,11 +211,11 @@ export const useGameStore = create<GameStore>()(
 
         set({
           player: nextPlayer,
-          contracts: generateContractsFromCity(contract.toCityId, CITIES),
-          selectedCityId: contract.toCityId,
+          orders: generateOrdersAround(lat, lng),
+          selectedOrderId: null,
         });
 
-        return { completed: contract };
+        return { completed: order };
       },
 
       resetGame: () => {
@@ -177,8 +227,8 @@ export const useGameStore = create<GameStore>()(
       name: SAVE_KEY,
       partialize: (state) => ({
         player: state.player,
-        contracts: state.contracts,
-        selectedCityId: state.selectedCityId,
+        orders: state.orders,
+        selectedOrderId: state.selectedOrderId,
         version: state.version,
       }),
       onRehydrateStorage: () => (state) => {
@@ -187,13 +237,3 @@ export const useGameStore = create<GameStore>()(
     },
   ),
 );
-
-export function contractsForSelectedCity(state: GameStore): Contract[] {
-  const { selectedCityId, contracts, player } = state;
-  if (!selectedCityId) return [];
-  return contracts.filter(
-    (c) =>
-      c.toCityId === selectedCityId &&
-      c.fromCityId === player.vehicle.cityId,
-  );
-}

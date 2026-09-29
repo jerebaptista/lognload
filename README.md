@@ -1,12 +1,15 @@
 # Log 'n Load
 
-Jogo de browser de logística rodoviária no Espírito Santo (Brasil).
+Jogo de browser de entregas locais na Grande Vitória (ES), com loop estilo app de delivery.
 
-## MVP
+## Loop do MVP
 
-- Mapa interativo (MapLibre + OpenFreeMap) com ~16 cidades do ES
-- 1 carro, contratos oferta∩demanda, viagem com traço progressivo
-- Persistência em `localStorage`
+1. Defina sua localização (CEP, GPS, pin no mapa ou bairro)
+2. Veja pedidos num raio de **2 km** (ETAs de 3–20 min de jogo)
+3. Aceite → traço da rota encolhe até a entrega
+4. Receba o pagamento e novos pedidos a partir do destino
+
+Fretes entre cidades ficam para a próxima etapa.
 
 ## Desenvolvimento
 
@@ -19,4 +22,4 @@ Abra [http://localhost:3000](http://localhost:3000).
 
 ## Stack
 
-Next.js (App Router) · TypeScript · Tailwind · shadcn/ui · MapLibre GL · Zustand
+Next.js (App Router) · TypeScript · Tailwind · shadcn/ui · MapLibre GL · Zustand · localStorage

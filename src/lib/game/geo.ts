@@ -1,4 +1,4 @@
-import { CAR_SPEED_KMH, ROAD_FACTOR, TIME_COMPRESSION } from "./constants";
+import { ROAD_FACTOR } from "./constants";
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -29,12 +29,6 @@ export function roadDistanceKm(
   lng2: number,
 ): number {
   return haversineKm(lat1, lng1, lat2, lng2) * ROAD_FACTOR;
-}
-
-/** Duração real da viagem em segundos (com compressão de tempo). */
-export function travelDurationSec(distanceKm: number): number {
-  const hours = distanceKm / CAR_SPEED_KMH;
-  return Math.max(8, Math.round((hours * 3600) / TIME_COMPRESSION));
 }
 
 /** Interpola ao longo de uma polyline [lng, lat][] pelo progresso 0..1. */
@@ -108,6 +102,10 @@ export function formatDuration(sec: number): string {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
+export function formatEtaMinutes(minutes: number): string {
+  return `${minutes} min`;
+}
+
 export function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", {
     style: "currency",
@@ -117,5 +115,6 @@ export function formatMoney(value: number): string {
 }
 
 export function formatKm(km: number): string {
-  return `${km.toFixed(0)} km`;
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1)} km`;
 }

@@ -5,41 +5,64 @@ import {
   Map as MapLibreMap,
   NavigationControl,
   type GeoJSONSource,
+  type MapMouseEvent,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { CITIES } from "@/lib/game/cities";
-import { ES_MAP_CENTER, ES_MAP_ZOOM, MAP_STYLE } from "@/lib/game/constants";
+import {
+  LOCAL_MAP_CENTER,
+  LOCAL_MAP_ZOOM,
+  MAP_STYLE,
+  ORDER_RADIUS_KM,
+  PLAYING_MAP_ZOOM,
+} from "@/lib/game/constants";
 import { remainingRoute } from "@/lib/game/geo";
 import { useGameStore } from "@/lib/game/store";
+import { toast } from "sonner";
 
-const CITIES_SOURCE = "cities";
+const POINTS_SOURCE = "delivery-points";
 const ROUTE_SOURCE = "active-route";
-const CITIES_LAYER = "cities-circle";
-const CITIES_LABEL = "cities-label";
+const RADIUS_SOURCE = "order-radius";
+const POINTS_LAYER = "points-circle";
+const POINTS_LABEL = "points-label";
 const ROUTE_LAYER = "route-line";
+const RADIUS_LAYER = "radius-fill";
+const RADIUS_OUTLINE = "radius-outline";
+
+function circlePolygon(
+  lng: number,
+  lat: number,
+  radiusKm: number,
+  steps = 64,
+): [number, number][] {
+  const coords: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const bearing = (i / steps) * Math.PI * 2;
+    const dLat = (radiusKm * Math.cos(bearing)) / 111.32;
+    const dLng =
+      (radiusKm * Math.sin(bearing)) /
+      (111.32 * Math.cos((lat * Math.PI) / 180));
+    coords.push([lng + dLng, lat + dLat]);
+  }
+  return coords;
+}
 
 export function GameMap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const readyRef = useRef(false);
 
+  const hasLocation = useGameStore((s) => s.player.hasLocation);
   const vehicle = useGameStore((s) => s.player.vehicle);
-  const contracts = useGameStore((s) => s.contracts);
-  const selectedCityId = useGameStore((s) => s.selectedCityId);
-  const selectCity = useGameStore((s) => s.selectCity);
+  const orders = useGameStore((s) => s.orders);
+  const selectedOrderId = useGameStore((s) => s.selectedOrderId);
+  const placingLocation = useGameStore((s) => s.placingLocation);
+  const selectOrder = useGameStore((s) => s.selectOrder);
+  const setLocation = useGameStore((s) => s.setLocation);
 
-  const reachableIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const c of contracts) {
-      if (c.fromCityId === vehicle.cityId) ids.add(c.toCityId);
-    }
-    return ids;
-  }, [contracts, vehicle.cityId]);
-
-  const activeToCityId = useMemo(() => {
-    if (vehicle.status !== "en_route" || !vehicle.contractId) return null;
-    return contracts.find((c) => c.id === vehicle.contractId)?.toCityId ?? null;
-  }, [contracts, vehicle.contractId, vehicle.status]);
+  const activeOrder = useMemo(() => {
+    if (vehicle.status !== "en_route" || !vehicle.orderId) return null;
+    return orders.find((o) => o.id === vehicle.orderId) ?? null;
+  }, [orders, vehicle.orderId, vehicle.status]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -47,8 +70,8 @@ export function GameMap() {
     const map = new MapLibreMap({
       container: containerRef.current,
       style: MAP_STYLE,
-      center: ES_MAP_CENTER,
-      zoom: ES_MAP_ZOOM,
+      center: LOCAL_MAP_CENTER,
+      zoom: LOCAL_MAP_ZOOM,
       attributionControl: { compact: true },
     });
 
@@ -56,19 +79,37 @@ export function GameMap() {
     mapRef.current = map;
 
     map.on("load", () => {
-      map.addSource(CITIES_SOURCE, {
+      map.addSource(RADIUS_SOURCE, {
         type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: [],
-        },
+        data: { type: "FeatureCollection", features: [] },
       });
-
+      map.addSource(POINTS_SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
       map.addSource(ROUTE_SOURCE, {
         type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: [],
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: RADIUS_LAYER,
+        type: "fill",
+        source: RADIUS_SOURCE,
+        paint: {
+          "fill-color": "#0f766e",
+          "fill-opacity": 0.08,
+        },
+      });
+      map.addLayer({
+        id: RADIUS_OUTLINE,
+        type: "line",
+        source: RADIUS_SOURCE,
+        paint: {
+          "line-color": "#0f766e",
+          "line-width": 1.5,
+          "line-opacity": 0.45,
+          "line-dasharray": [2, 2],
         },
       });
 
@@ -88,18 +129,18 @@ export function GameMap() {
       });
 
       map.addLayer({
-        id: CITIES_LAYER,
+        id: POINTS_LAYER,
         type: "circle",
-        source: CITIES_SOURCE,
+        source: POINTS_SOURCE,
         paint: {
           "circle-radius": [
             "match",
             ["get", "role"],
             "current",
-            10,
+            11,
             "destination",
-            9,
-            "reachable",
+            10,
+            "order",
             8,
             6,
           ],
@@ -110,23 +151,34 @@ export function GameMap() {
             "#0f766e",
             "destination",
             "#c2410c",
-            "reachable",
+            "order",
             "#2563eb",
             "#64748b",
           ],
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": [
+            "case",
+            ["boolean", ["get", "selected"], false],
+            3,
+            2,
+          ],
+          "circle-stroke-color": [
+            "case",
+            ["boolean", ["get", "selected"], false],
+            "#fbbf24",
+            "#ffffff",
+          ],
         },
       });
 
       map.addLayer({
-        id: CITIES_LABEL,
+        id: POINTS_LABEL,
         type: "symbol",
-        source: CITIES_SOURCE,
+        source: POINTS_SOURCE,
+        filter: ["!=", ["get", "role"], "current"],
         layout: {
           "text-field": ["get", "name"],
           "text-size": 11,
-          "text-offset": [0, 1.2],
+          "text-offset": [0, 1.25],
           "text-anchor": "top",
           "text-font": ["Noto Sans Regular"],
         },
@@ -137,16 +189,11 @@ export function GameMap() {
         },
       });
 
-      map.on("mouseenter", CITIES_LAYER, () => {
+      map.on("mouseenter", POINTS_LAYER, () => {
         map.getCanvas().style.cursor = "pointer";
       });
-      map.on("mouseleave", CITIES_LAYER, () => {
+      map.on("mouseleave", POINTS_LAYER, () => {
         map.getCanvas().style.cursor = "";
-      });
-      map.on("click", CITIES_LAYER, (e) => {
-        const id = e.features?.[0]?.properties?.id as string | undefined;
-        if (!id) return;
-        selectCity(id);
       });
 
       readyRef.current = true;
@@ -158,39 +205,151 @@ export function GameMap() {
       map.remove();
       mapRef.current = null;
     };
-  }, [selectCity]);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const onClick = (e: MapMouseEvent) => {
+      if (useGameStore.getState().placingLocation) {
+        const { lng, lat } = e.lngLat;
+        setLocation({
+          lat,
+          lng,
+          label: "Ponto marcado no mapa",
+        });
+        toast.success("Localização marcada no mapa");
+        return;
+      }
+
+      if (!readyRef.current) return;
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: [POINTS_LAYER],
+      });
+      const id = features[0]?.properties?.id as string | undefined;
+      const role = features[0]?.properties?.role as string | undefined;
+      if (id && role === "order") {
+        selectOrder(id);
+      }
+    };
+
+    map.on("click", onClick);
+    return () => {
+      map.off("click", onClick);
+    };
+  }, [selectOrder, setLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    map.getCanvas().style.cursor = placingLocation ? "crosshair" : "";
+  }, [placingLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current || !hasLocation) return;
+    map.easeTo({
+      center: [vehicle.lng, vehicle.lat],
+      zoom: PLAYING_MAP_ZOOM,
+      duration: 800,
+    });
+  }, [hasLocation, vehicle.lat, vehicle.lng]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
 
-    const source = map.getSource(CITIES_SOURCE) as GeoJSONSource | undefined;
-    if (!source) return;
+    const radiusSource = map.getSource(RADIUS_SOURCE) as GeoJSONSource | undefined;
+    const pointsSource = map.getSource(POINTS_SOURCE) as GeoJSONSource | undefined;
+    if (!radiusSource || !pointsSource) return;
 
-    source.setData({
+    if (!hasLocation) {
+      radiusSource.setData({ type: "FeatureCollection", features: [] });
+      pointsSource.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+
+    radiusSource.setData({
       type: "FeatureCollection",
-      features: CITIES.map((city) => {
-        let role = "idle";
-        if (city.id === vehicle.cityId) role = "current";
-        else if (city.id === activeToCityId) role = "destination";
-        else if (reachableIds.has(city.id)) role = "reachable";
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              circlePolygon(vehicle.lng, vehicle.lat, ORDER_RADIUS_KM),
+            ],
+          },
+        },
+      ],
+    });
 
-        return {
+    const features: Array<{
+      type: "Feature";
+      properties: Record<string, string | boolean>;
+      geometry: { type: "Point"; coordinates: [number, number] };
+    }> = [
+      {
+        type: "Feature",
+        properties: {
+          id: "player",
+          name: "Você",
+          role: "current",
+          selected: false,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [vehicle.lng, vehicle.lat],
+        },
+      },
+    ];
+
+    if (activeOrder) {
+      features.push({
+        type: "Feature",
+        properties: {
+          id: activeOrder.id,
+          name: activeOrder.title,
+          role: "destination",
+          selected: true,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [activeOrder.toLng, activeOrder.toLat],
+        },
+      });
+    } else {
+      for (const order of orders) {
+        features.push({
           type: "Feature",
           properties: {
-            id: city.id,
-            name: city.name,
-            role,
-            selected: city.id === selectedCityId,
+            id: order.id,
+            name: order.title,
+            role: "order",
+            selected: order.id === selectedOrderId,
           },
           geometry: {
             type: "Point",
-            coordinates: [city.lng, city.lat],
+            coordinates: [order.toLng, order.toLat],
           },
-        };
-      }),
+        });
+      }
+    }
+
+    pointsSource.setData({
+      type: "FeatureCollection",
+      features,
     });
-  }, [activeToCityId, reachableIds, selectedCityId, vehicle.cityId]);
+  }, [
+    activeOrder,
+    hasLocation,
+    orders,
+    selectedOrderId,
+    vehicle.lat,
+    vehicle.lng,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -233,17 +392,19 @@ export function GameMap() {
   return (
     <div className="relative min-h-0 flex-1">
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
-      <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-md bg-background/90 px-3 py-2 text-xs text-muted-foreground shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="inline-block size-2.5 rounded-full bg-teal-700" /> Atual
+      {hasLocation ? (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-md bg-background/90 px-3 py-2 text-xs text-muted-foreground shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="inline-block size-2.5 rounded-full bg-teal-700" /> Você
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="inline-block size-2.5 rounded-full bg-blue-600" /> Pedido (≤2 km)
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="inline-block size-2.5 rounded-full bg-orange-700" /> Destino ativo
+          </div>
         </div>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="inline-block size-2.5 rounded-full bg-blue-600" /> Com contrato
-        </div>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="inline-block size-2.5 rounded-full bg-orange-700" /> Destino
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }
